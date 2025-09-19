@@ -17,9 +17,9 @@ export default function GitlabUserSnapshotCard({
         <Link className="p-2 m-2 rounded-lg border" href={`/user/${userSummary.user.username}`}>
             <img className="rounded-[30px] mx-auto" width={60} height={60} src={userSummary.user.avatar_url} alt="Profile Pic" />
             <div className="text-center pt-2 text-lg font-medium">{userSummary.user.name}</div>
-            <div>Merge Request Count: {userSummary.mergeRequests.length}</div>
+            <div>Merge Request Author Count: {userSummary.mergeRequests.author.filter(mr => mr.state === 'merged' && mr.source_branch.indexOf("revert-") == -1).length}</div>
+            <div>Merge Request Reviewer Count: {userSummary.mergeRequests.reviewer.filter(mr => mr.state === 'merged' && mr.source_branch.indexOf("revert-") == -1).length}</div>
             <div>Commit Count: {totalComits}</div>
-            <div>Avg Commits per MR: {(totalComits / userSummary.mergeRequests.length).toFixed(2)}</div>
         </Link>
     )
 }

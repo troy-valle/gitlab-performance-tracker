@@ -6,7 +6,10 @@ export const users: GitlabUser[] = team || [];
 export interface GitlabUserSummary {
     user: GitlabUser;
     commits: { project: GitlabProject; commits: GitlabCommit[] }[];
-    mergeRequests: GitlabMergeRequest[];
+    mergeRequests: {
+        author: GitlabMergeRequest[];
+        reviewer: GitlabMergeRequest[];
+    }
 }
 
 export interface GitlabUser {
@@ -44,6 +47,16 @@ export interface GitlabMergeRequest {
     description: string;
     state: string;
     created_at: string;
+    author: GitlabUser;
+    source_branch: string;
+    target_branch: string;
+    upvotes: number;
+    downvotes: number;
+    merged_by: GitlabUser | null;
+    merged_at: string | null;
+    closed_by: GitlabUser | null;
+    closed_at: string | null;
+    web_url: string;
 }
 
 export interface GitlabProject {
@@ -78,12 +91,14 @@ async function getProjectCommitsSince(
     projectId: number, 
     author: string, 
     sinceDate: string,
+    toDate?: string,
     page: number = 1,
     perPage: number = 100
 ): Promise<GitlabCommit[]> {
     const params = new URLSearchParams({
         author: author,
         since: sinceDate,
+        until: toDate || new Date().toDateString(),
         scope: 'all',
         per_page: perPage.toString(),
         page: page.toString()
@@ -108,7 +123,8 @@ async function getProjectCommitsSince(
 // Get ALL commits for a user since a specific date across all their projects
 async function getUserCommitsSince(
     user: GitlabUser, 
-    sinceDate: string
+    sinceDate: string,
+    toDate?: string,
 ): Promise<{ project: GitlabProject; commits: GitlabCommit[] }[]> {
     try {
         // Get all projects for the user
@@ -127,6 +143,7 @@ async function getUserCommitsSince(
                         project.id, 
                         user.name, 
                         sinceDate, 
+                        toDate,
                         page, 
                         100
                     );
@@ -167,23 +184,30 @@ async function getUserCommitsSince(
 
 async function getUserMergeRequestsSince(
     user: GitlabUser,
-    sinceDate: string
+    type: 'author' | 'approver' = 'author',
+    sinceDate: string,
+    toDate?: string,
 ): Promise<GitlabMergeRequest[]> {
     const allMergeRequests: GitlabMergeRequest[] = [];
     let page = 1;
     let hasMorePages = true;
 
     while (hasMorePages) {
-        const params = new URLSearchParams({
-            author_username: user.username,
+        const param_obj: any = {
             state: 'all',
             scope: 'all',
             per_page: '100',
             page: page.toString(),
             order_by: 'created_at',
             sort: 'desc',
-            created_after: sinceDate
-        });
+            created_after: sinceDate,
+            created_before: toDate || new Date().toDateString(),
+        }
+
+        if(type === 'author') param_obj.author_username = user.username;
+        else param_obj['approved_by_ids[]'] = user.id;
+
+        const params = new URLSearchParams(param_obj);
 
         const fetchUrl = `${GITLAB_API_URL}/merge_requests?${params}`;
         
@@ -224,24 +248,29 @@ async function getUserMergeRequestsSince(
 
 async function getUserSummary(
     user: GitlabUser,
-    sinceDate: string
+    sinceDate: string,
+    toDate?: string,
 ): Promise<GitlabUserSummary> {
-    const mergeRequests = await getUserMergeRequestsSince(user, sinceDate);
+    const mergeRequests = await getUserMergeRequestsSince(user, 'author', sinceDate);
+    const reviewerMergeRequests = await getUserMergeRequestsSince(user, 'approver', sinceDate);
     const commits = await getUserCommitsSince(user, sinceDate);
-    
     return {
         user,
-        mergeRequests,
-        commits
+        commits,
+        mergeRequests: {
+            author: mergeRequests,
+            reviewer: reviewerMergeRequests
+        }
     }
 }
 
 export async function getUsersSummary(
     users: GitlabUser[],
-    sinceDate: string
+    sinceDate: string,
+    toDate?: string,
 ): Promise<GitlabUserSummary[]> {
     const userSummaryPromises = users.map(async (user) => {
-        return await getUserSummary(user, sinceDate)
+        return await getUserSummary(user, sinceDate, toDate)
     });
 
     const results = await Promise.all(userSummaryPromises);
