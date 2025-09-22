@@ -25,7 +25,7 @@ export default function GitlabUserSnapshotCard({
         }
 
         fetchData();
-    })
+    }, [user, startDate, endDate]);
 
     useEffect(() => {
         let commits = 0;
