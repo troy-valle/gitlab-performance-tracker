@@ -1,7 +1,7 @@
 /* @next-codemod-ignore */
 import DateRangePicker from "@/components/DateRangePicker";
 import GitlabUserSnapshotCard from "@/components/GitlabUserSnapshotCard";
-import { getUsersSummary, users } from "@/util/gitlab";
+import { users } from "@/util/gitlab";
 
 type Props = {
   searchParams?: { 
@@ -14,7 +14,7 @@ export default async function Home({searchParams}: Props) {
   const { startDate, endDate } = await searchParams ?? {};
 
   let start: Date;
-  let end = new Date(endDate || new Date().toDateString());
+  let end = new Date(endDate || new Date().toISOString());
 
   if (startDate) {
     start = new Date(startDate);
@@ -23,16 +23,14 @@ export default async function Home({searchParams}: Props) {
     start = new Date();
     start.setMonth(start.getMonth() - 1);
   }
-
-  const gitlabSummary = await getUsersSummary(users, start.toDateString(), end.toDateString());
   
   return (
     <div>
       <main>
-        <DateRangePicker />
+        <DateRangePicker initStartDate={start.toISOString()} initEndDate={end.toISOString()}/>
         <div className="flex wrap">
           {
-            gitlabSummary.map((userSummary) =>  <GitlabUserSnapshotCard key={userSummary.user.id} userSummary={userSummary}/> )
+            users.map((user) =>  <GitlabUserSnapshotCard key={user.id} user={user} startDate={start.toISOString()} endDate={end.toISOString()}/> )
           }
         </div>
       </main>

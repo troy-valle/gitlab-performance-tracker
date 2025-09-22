@@ -246,14 +246,14 @@ async function getUserMergeRequestsSince(
 }
 
 
-async function getUserSummary(
+export async function getUserSummary(
     user: GitlabUser,
     sinceDate: string,
     toDate?: string,
 ): Promise<GitlabUserSummary> {
-    const mergeRequests = await getUserMergeRequestsSince(user, 'author', sinceDate);
-    const reviewerMergeRequests = await getUserMergeRequestsSince(user, 'approver', sinceDate);
-    const commits = await getUserCommitsSince(user, sinceDate);
+    const mergeRequests = await getUserMergeRequestsSince(user, 'author', sinceDate, toDate);
+    const reviewerMergeRequests = await getUserMergeRequestsSince(user, 'approver', sinceDate, toDate);
+    const commits = await getUserCommitsSince(user, sinceDate, toDate);
     return {
         user,
         commits,
